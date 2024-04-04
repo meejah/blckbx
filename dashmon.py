@@ -45,6 +45,7 @@ async def _real_main(reactor):
             proto = await agent.open(wsaddr, options)
         except Exception as e:
             print(f"Error: {e}")
+            return
             ##continue
         print("connected")
 
@@ -57,7 +58,7 @@ async def _real_main(reactor):
             nonlocal first_telemetry
             if first_telemetry is None:
                 first_telemetry = reactor.seconds()
-            js["seconds"] = first_telemetry - reactor.seconds()
+            js["seconds"] = reactor.seconds() - first_telemetry
             telemetry_file.write("{}\n".format(json.dumps(js)))
 
         def got_message(raw_data, is_binary=False):
