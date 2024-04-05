@@ -18,13 +18,27 @@ def _process_file(f, columns):
         columns = tuple(sorted(first_data.keys()))
     columns = ("seconds", ) + columns
 
+    stats = {
+        c: 0
+        for c in columns
+    }
+
     with open(path.with_suffix(".csv"), "w") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(columns)
         for line in lines:
             data = json.loads(line)
-            row = [
-                data[c]
-                for c in columns
-            ]
+            try:
+                row = [
+                    data[c]
+                    for c in columns
+                ]
+                found_any = True
+            except KeyError as e:
+                print("DING", e, e.args)
+                stats[e.args[0]] += 1
+                continue
             writer.writerow(row)
+    for c in columns:
+        if stats[c]:
+            print('Error: {} rows lacking "{}".'.format(stats[c], c))
