@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "blckbx"
+dynamic = ["version"]
+description = "Black Box records FTC-Dashboard traffic to a file"
+readme = "README.rst"
+license = {file = "LICENSE"}
+authors = [
+    { name = "meejah", email = "meejah@meejah.ca" },
+]
+requires-python = ">=3.6"
+keywords = [
+    "FIRST-FTC",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "click",
+    "twisted",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+dev = [
+    "twine",
+    "sphinx",
+    "dulwich",
+    "gpg",  # should use isis lovecruft's version?
+    "pip-tools",
+    "hatch",
+    "readme-renderer",
+]
+
+[project.scripts]
+blckbx = "blackbox._cli:blackbox"
+
+[tool.hatch.version]
+path = "src/blackbox/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "Makefile",
+    "README.rst",
+    "pyproject.toml",
+    "requirements-pinned.txt",
+]
+exclude = [
+    "*~",
+    "*.egg-info*",
+]
