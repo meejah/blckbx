@@ -1,8 +1,7 @@
 import json
 import time
 
-from twisted.internet.task import react, deferLater
-from twisted.internet.defer import ensureDeferred
+from twisted.internet.task import deferLater
 
 from autobahn.twisted.websocket import create_client_agent
 
@@ -30,27 +29,25 @@ def decode_robot_message(js, got_telemetry):
         print("unknown", ty)
 
 
-async def _real_main(reactor):
+async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
+    """
+    Connect to and monitor an FTC Dashboard instance.
+    """
     agent = create_client_agent(reactor)
-    wsaddr = "ws://192.168.43.1:8000/"
-    options = {
-        # "headers": {
-        #     "x-foo": "bar",
-        # }
-    }
+    options = {}
 
-    if True:#    while True:
+    while True:
         print(f"connecting: {wsaddr}")
         try:
             proto = await agent.open(wsaddr, options)
         except Exception as e:
             print(f"Error: {e}")
-            return
-            ##continue
-        print("connected")
+            await deferLater(reactor, 1.0, lambda: None)
+            continue
+        print("Connected.")
 
-        fname = "match-{}.js".format(time.asctime())
-        print(f"writing: {fname}")
+        fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
+        print(f"  telemetry: {fname}")
         telemetry_file = open(fname, "w")
         first_telemetry = None
 
@@ -71,20 +68,15 @@ async def _real_main(reactor):
 
         await proto.is_open
 
+        # if we don't periodically send these, the WebSocket is disconnected
         def send_update_request():
             proto.sendMessage(json.dumps({"type": "GET_ROBOT_STATUS"}).encode("utf8"))
             deferLater(reactor, 1, send_update_request)
         send_update_request()
 
-        print("protocol open")
-        await deferLater(reactor, 0, lambda: None)
-
-        #proto.sendClose(code=1000, reason="byebye")
-        x = await proto.is_closed
-        print("CLOSED", x)
+        try:
+            await proto.is_closed
+            print("Stream closed, re-connecting.")
+        except Exception as e:
+            print(f"Error, stream closed: {e}")
         telemetry_file.close()
-
-
-@react
-def main(reactor):
-    return ensureDeferred(_real_main(reactor))

@@ -39,10 +39,13 @@ dev = [
 ]
 
 [project.scripts]
-blckbx = "blackbox._cli:blackbox"
+blckbx = "blackbox._cli:blckbx"
 
 [tool.hatch.version]
 path = "src/blackbox/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/blackbox"]
 
 [tool.hatch.build.targets.sdist]
 include = [
