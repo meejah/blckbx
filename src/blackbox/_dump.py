@@ -13,6 +13,10 @@ def _process_file(f, columns):
     path = pathlib.Path(f.name)
     lines = f.readlines()
 
+    if not lines:
+        print(f"Error: {f.name} is empty")
+        return
+
     if not columns:
         first_data = json.loads(lines[0])
         columns = tuple(sorted(first_data.keys()))
@@ -24,6 +28,7 @@ def _process_file(f, columns):
     }
 
     with open(path.with_suffix(".csv"), "w") as csvfile:
+        print("Writing: {}".format(csvfile.name))
         writer = csv.writer(csvfile)
         writer.writerow(columns)
         for line in lines:
@@ -35,10 +40,9 @@ def _process_file(f, columns):
                 ]
                 found_any = True
             except KeyError as e:
-                print("DING", e, e.args)
                 stats[e.args[0]] += 1
                 continue
             writer.writerow(row)
     for c in columns:
         if stats[c]:
-            print('Error: {} rows lacking "{}".'.format(stats[c], c))
+            print('Error: "{}": {} rows lacking "{}".'.format(f.name, stats[c], c))
