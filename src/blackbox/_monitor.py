@@ -66,16 +66,24 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
             continue
         print("Connected.")
 
-        fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
-        print(f"  telemetry: {fname}")
-        telemetry_file = open(fname, "w")
+        telemetry_file = None
         first_telemetry = None
-
         state = RobotState("", 0, [])
+
+        def switch_telemetry_files():
+            nonlocal telemetry_file, first_telemetry
+            fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
+            print(f"  telemetry: {fname}")
+            telemetry_file = open(fname, "w")
+            first_telemetry = None
+        switch_telemetry_files()
 
         def state_changed(old, new):
             if old.status != new.status:
                 print(f"Status: {new.status}")
+                if old.status == "stopped":
+                    print("\nSwitching telemetry files")
+                    switch_telemetry_files()
             if old.op_modes != new.op_modes:
                 print(f"Op Modes: {new.op_modes}")
 
