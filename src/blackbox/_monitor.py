@@ -17,12 +17,16 @@ class RobotState:
 
 
 class Robot:
+    """
+    A state-machine to track what the robot is doing.
+
+    Possibly overkill for this application, but oh we
+    """
     _m = automat.MethodicalMachine()
 
     def __init__(self, reactor):
         self._open_telemetry()
         self._first_telemetry = None
-        self._telemetry_count = 0
         self._reactor = reactor
 
     def _get_current_time(self):
@@ -80,7 +84,6 @@ class Robot:
     @_m.output()
     def _rotate_telemetry(self):
         self.telemetry_file.close()
-        self._telemetry_count = 0
         self._open_telemetry()
 
     def _open_telemetry(self):
@@ -90,7 +93,6 @@ class Robot:
 
     @_m.output()
     def _write_telemetry(self, telemetry):
-        self._telemetry_count += 1
         if self._first_telemetry is None:
             self._first_telemetry = self._get_current_time()
         telemetry["seconds"] = self._get_current_time() - self._first_telemetry
@@ -113,6 +115,7 @@ class Robot:
 
 def _process_robot_message(msg, state, state_machine):
     """
+    We got an incoming WebSocket message
     """
     ty = msg["type"]
     if ty == 'RECEIVE_OP_MODE_LIST':
@@ -189,7 +192,8 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
 
         await proto.is_open
 
-        # if we don't periodically send these, the WebSocket is disconnected
+        # if we don't periodically send these requests, the WebSocket
+        # is disconnected by the on-robot Web server
         def send_update_request():
             proto.sendMessage(json.dumps({"type": "GET_ROBOT_STATUS"}).encode("utf8"))
             deferLater(reactor, 1, send_update_request)
@@ -200,5 +204,5 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
             print("Stream closed, re-connecting.")
         except Exception as e:
             print(f"Error, stream closed: {e}")
-        # XXX FIXME use an input
+        # XXX FIXME use an @input() for the machine
         statemachine.telemetry_file.close()
