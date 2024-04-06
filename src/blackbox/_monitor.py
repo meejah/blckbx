@@ -6,6 +6,7 @@ from twisted.internet.task import deferLater
 from autobahn.twisted.websocket import create_client_agent
 
 from attr import frozen, evolve
+import automat
 
 
 @frozen
@@ -15,33 +16,132 @@ class RobotState:
     op_modes: list[str]
 
 
-def _process_robot_message(msg, state, got_telemetry):
+class Robot:
+    _m = automat.MethodicalMachine()
+
+    def __init__(self, reactor):
+        self._open_telemetry()
+        self._first_telemetry = None
+        self._telemetry_count = 0
+        self._reactor = reactor
+
+    def _get_current_time(self):
+        return self._reactor.seconds()
+
+    @_m.input()
+    def stop(self):
+        """
+        The robot is stopped
+        """
+
+    @_m.input()
+    def init(self, op):
+        """
+        The robot has entered Idle for a particular op-mode
+        """
+
+    @_m.input()
+    def play(self, op):
+        """
+        The robot is running some op-mode
+        """
+
+    @_m.input()
+    def got_telemetry(self, telemetry):
+        """
+        Got a new batch of telemetry
+        """
+
+    @_m.state(initial=True)
+    def stopped(self):
+        """
+        Nothing going on
+        """
+
+    @_m.state()
+    def initializing(self):
+        """
+        Nothing going on
+        """
+
+    @_m.state()
+    def running(self):
+        """
+        """
+
+    @_m.output()
+    def _starting(self, op):
+        print(f"Starting: {op}")
+
+    @_m.output()
+    def _playing(self, op):
+        print(f"Playing: {op}")
+
+    @_m.output()
+    def _rotate_telemetry(self):
+        self.telemetry_file.close()
+        self._telemetry_count = 0
+        self._open_telemetry()
+
+    def _open_telemetry(self):
+        fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
+        print(f"  telemetry: {fname}")
+        self.telemetry_file = open(fname, "w")
+
+    @_m.output()
+    def _write_telemetry(self, telemetry):
+        self._telemetry_count += 1
+        if self._first_telemetry is None:
+            self._first_telemetry = self._get_current_time()
+        telemetry["seconds"] = self._get_current_time() - self._first_telemetry
+        self.telemetry_file.write("{}\n".format(json.dumps(telemetry)))
+
+    stopped.upon(stop, enter=stopped, outputs=[])
+    stopped.upon(play, enter=stopped, outputs=[])
+    stopped.upon(init, enter=initializing, outputs=[_starting])
+    stopped.upon(got_telemetry, enter=stopped, outputs=[_write_telemetry])
+
+    initializing.upon(init, enter=initializing, outputs=[])
+    initializing.upon(got_telemetry, enter=initializing, outputs=[_write_telemetry])
+    initializing.upon(play, enter=running, outputs=[_playing])
+    initializing.upon(stop, enter=stopped, outputs=[_rotate_telemetry])
+
+    running.upon(play, enter=running, outputs=[])
+    running.upon(got_telemetry, enter=running, outputs=[_write_telemetry])
+    running.upon(stop, enter=stopped, outputs=[_rotate_telemetry])
+
+
+def _process_robot_message(msg, state, state_machine):
     """
     """
-    ty = js["type"]
+    ty = msg["type"]
     if ty == 'RECEIVE_OP_MODE_LIST':
-        print(f"Op Modes:")
-        state = evolve(state, op_modes=sorted(js['opModeList']))
+        print("Op Modes:")
+        for om in sorted(msg['opModeList']):
+            print(f"  {om}")
 
     elif ty == 'RECEIVE_CONFIG':
         pass
 
     elif ty == 'RECEIVE_TELEMETRY':
-        state = evolve(state, telemetry_count=state.telemetry_count + len(js["telemetry"]))
-        for d in js["telemetry"]:
-            got_telemetry(d["data"])
+        state = evolve(state, telemetry_count=state.telemetry_count + len(msg["telemetry"]))
+        for d in msg["telemetry"]:
+            state_machine.got_telemetry(d["data"])
 
     elif ty == 'RECEIVE_ROBOT_STATUS':
-        raw_status = js["status"]
-
+        status = msg["status"]
+        st = "unknown"
         if status["activeOpMode"] == "$Stop$Robot$":
-            status = "stopped"
+            state_machine.stop()
+            st = "stopped"
         elif status["activeOpModeStatus"] == "RUNNING":
-            status = "run:" + status["activeOpMode"]
+            state_machine.play(status["activeOpMode"])
+            st = "running"
         else:
-            status = "idle:" + status["activeOpMode"]
+            state_machine.init(status["activeOpMode"])
+            st = "idle"
 
-        state = evolve(state, status=status)
+        state = evolve(state, status=st)
 
     else:
         print(f"Unknown message type: {ty}")
@@ -66,39 +166,20 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
             continue
         print("Connected.")
 
-        telemetry_file = None
-        first_telemetry = None
         state = RobotState("", 0, [])
-
-        def switch_telemetry_files():
-            nonlocal telemetry_file, first_telemetry
-            fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
-            print(f"  telemetry: {fname}")
-            telemetry_file = open(fname, "w")
-            first_telemetry = None
-        switch_telemetry_files()
+        statemachine = Robot(reactor)
 
         def state_changed(old, new):
             if old.status != new.status:
                 print(f"Status: {new.status}")
-                if old.status == "stopped":
-                    print("\nSwitching telemetry files")
-                    switch_telemetry_files()
             if old.op_modes != new.op_modes:
                 print(f"Op Modes: {new.op_modes}")
-
-        def got_telemetry(js):
-            nonlocal first_telemetry
-            if first_telemetry is None:
-                first_telemetry = reactor.seconds()
-            js["seconds"] = reactor.seconds() - first_telemetry
-            telemetry_file.write("{}\n".format(json.dumps(js)))
 
         def got_message(raw_data, is_binary=False):
             nonlocal state
             try:
                 data = json.loads(raw_data)
-                newstate = _process_robot_message(data, state, got_telemetry)
+                newstate = _process_robot_message(data, state, statemachine)
                 if newstate != state:
                     state_changed(state, newstate)
                     state = newstate
@@ -119,4 +200,5 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
             print("Stream closed, re-connecting.")
         except Exception as e:
             print(f"Error, stream closed: {e}")
-        telemetry_file.close()
+        # XXX FIXME use an input
+        statemachine.telemetry_file.close()
