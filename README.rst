@@ -3,7 +3,7 @@ Black Box (``blckbx``)
 
 `FTC-Dashboard <https://acmerobotics.github.io/ftc-dashboard/>`_ allows you to see realtime data from your FIRST FTC / REV Robotics controller.
 
-``blckbx`` records that data to a file; it is a small Python tool that uses WebSockets to connect to the Web server that `FTC-Dashboard <https://acmerobotics.github.io/ftc-dashboard/>`_ runs on your robot and record all Telemetry messages.
+``blckbx`` records that data to a file; it is a small Python tool that uses WebSockets to connect to the Web server that `FTC-Dashboard <https://acmerobotics.github.io/ftc-dashboard/>`_ runs on your robot and records all Telemetry messages.
 
 
 Installation
