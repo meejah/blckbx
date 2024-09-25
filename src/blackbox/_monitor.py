@@ -110,6 +110,7 @@ class Robot:
 
     running.upon(play, enter=running, outputs=[])
     running.upon(got_telemetry, enter=running, outputs=[_write_telemetry])
+    running.upon(init, enter=initializing, outputs=[_starting])
     running.upon(stop, enter=stopped, outputs=[_rotate_telemetry])
 
 
