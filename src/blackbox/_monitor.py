@@ -203,6 +203,7 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
         try:
             await proto.is_closed
             print("Stream closed, re-connecting.")
+            await deferLater(reactor, 0.42, lambda: None)
         except Exception as e:
             print(f"Error, stream closed: {e}")
         # XXX FIXME use an @input() for the machine

@@ -1,4 +1,5 @@
 import click
+import json
 from twisted.internet.task import react
 from twisted.internet.defer import ensureDeferred
 
@@ -22,6 +23,28 @@ def record():
     def main(reactor):
         return ensureDeferred(_monitor_dashboard(reactor))
     react(main)
+
+
+@blckbx.command()
+@click.argument("file", type=click.File("r"))
+def analyze(file):
+    """
+    """
+    last_time = None
+    intervals = []
+    for line in file.readlines():
+        js = json.loads(line)
+        # print(js)
+        if last_time is not None:
+            interval = float(js["time"]) - float(last_time)
+            intervals.append(interval)
+        last_time = float(js["time"])
+
+    average_interval = sum(intervals) / len(intervals)
+    print(f"average loop: {average_interval}s")
+    lps = 1.0 / average_interval
+    print(f"loops per second: {lps}")
+
 
 
 @blckbx.command()
