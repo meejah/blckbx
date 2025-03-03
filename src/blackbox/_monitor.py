@@ -84,6 +84,8 @@ class Robot:
     @_m.output()
     def _rotate_telemetry(self):
         self.telemetry_file.close()
+        if self.telemetry_file.stat().st_size == 0:
+            self.telementry_file.erase()
         self._open_telemetry()
 
     def _open_telemetry(self):
@@ -135,7 +137,7 @@ def _process_robot_message(msg, state, state_machine):
     elif ty == 'RECEIVE_ROBOT_STATUS':
         status = msg["status"]
         st = "unknown"
-        if status["activeOpMode"] == "$Stop$Robot$":
+        if status["activeOpMode"] == "$Stop$Robot$" or status["activeOpModeStatus"] == "STOPPED":
             state_machine.stop()
             st = "stopped"
         elif status["activeOpModeStatus"] == "RUNNING":
@@ -176,6 +178,8 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
         def state_changed(old, new):
             if old.status != new.status:
                 print(f"Status: {new.status}")
+                if new.status == "running" and old.status == "stopped":
+                    print("new telemetry")
             if old.op_modes != new.op_modes:
                 print(f"Op Modes: {new.op_modes}")
 
