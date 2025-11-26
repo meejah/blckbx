@@ -25,7 +25,7 @@ class Robot:
     _m = automat.MethodicalMachine()
 
     def __init__(self, reactor):
-        self._open_telemetry()
+        self.telemetry_file = None
         self._first_telemetry = None
         self._reactor = reactor
 
@@ -86,15 +86,17 @@ class Robot:
         self.telemetry_file.close()
         if self.telemetry_file.stat().st_size == 0:
             self.telementry_file.erase()
-        self._open_telemetry()
+        self.telemetry_file = None
 
     def _open_telemetry(self):
-        fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
-        print(f"  telemetry: {fname}")
-        self.telemetry_file = open(fname, "w")
+        if self.telemetry_file is None:
+            fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
+            print(f"  telemetry: {fname}")
+            self.telemetry_file = open(fname, "w")
 
     @_m.output()
     def _write_telemetry(self, telemetry):
+        self._open_telemetry()
         if self._first_telemetry is None:
             self._first_telemetry = self._get_current_time()
         telemetry["seconds"] = self._get_current_time() - self._first_telemetry
@@ -211,4 +213,5 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
         except Exception as e:
             print(f"Error, stream closed: {e}")
         # XXX FIXME use an @input() for the machine
-        statemachine.telemetry_file.close()
+        if statemachine.telemetry_file is not None:
+            statemachine.telemetry_file.close()
