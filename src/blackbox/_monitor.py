@@ -101,6 +101,7 @@ class Robot:
             self._first_telemetry = self._get_current_time()
         telemetry["seconds"] = self._get_current_time() - self._first_telemetry
         self.telemetry_file.write("{}\n".format(json.dumps(telemetry)))
+        self.telemetry_file.flush()
 
     stopped.upon(stop, enter=stopped, outputs=[])
     stopped.upon(play, enter=stopped, outputs=[])
@@ -215,3 +216,4 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
         # XXX FIXME use an @input() for the machine
         if statemachine.telemetry_file is not None:
             statemachine.telemetry_file.close()
+            statemachine.telemetry_file = None

@@ -84,7 +84,7 @@ def analyze(file):
     for line in file.readlines():
         js = json.loads(line)
         positions.append((float(js["position-x"]), float(js["position-y"])))
-        targets.append((float(js["target-x"]), float(js["target-y"])))
+#        targets.append((float(js["target-x"]), float(js["target-y"])))
         times.append(float(js["seconds"]))
         # print(js)
         if last_time is not None:
@@ -99,19 +99,17 @@ def analyze(file):
         return math.sqrt(dx*dx + dy*dy)
 
     velocities = []
-    errors = []
     velocities.append((0, 0))
     last_position = positions[0]
     last_time = times[0]
     max_vel = 0.0
-    for (position, t, target) in zip(positions[1:], times[1:], targets[1:]):
-        errors.append(point_distance(target, position))
+    vel = 0.0
+    for (position, t) in zip(positions[1:], times[1:]):
         vel = point_distance(last_position, position) / (t - last_time)
         if vel > max_vel:
             max_vel = vel
         last_position = position
         last_time = t
-        print(errors[-1])
 
     average_interval = sum(intervals) / len(intervals)
     print(f"average loop: {average_interval}s")
