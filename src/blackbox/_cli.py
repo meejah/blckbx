@@ -68,8 +68,13 @@ def clean():
 
 
 @blckbx.command()
+@click.option(
+    "--column", "-c",
+    multiple=True,
+    help="Column to analyze",
+)
 @click.argument("file", type=click.File("r"), required=False, default=None)
-def analyze(file):
+def analyze(file, column):
     """
     """
     if file is None:
@@ -81,11 +86,27 @@ def analyze(file):
     positions = []
     targets = []
     times = []
+    col_mins = [10000] * len(column)
+    col_maxs = [0] * len(column)
     for line in file.readlines():
         js = json.loads(line)
         positions.append((float(js["position-x"]), float(js["position-y"])))
 #        targets.append((float(js["target-x"]), float(js["target-y"])))
         times.append(float(js["seconds"]))
+        coldata = []
+        for i, c in enumerate(column):
+            v = js.get(c, "<no-data>")
+            try:
+                x = float(v)
+                if x > col_maxs[i]:
+                    col_maxs[i] = x
+                if x < col_mins[i]:
+                    col_mins[i] = x
+                v = "{}={:2.2f}".format(c, x)
+            except ValueError:
+                pass
+            coldata.append(v)
+        print(" ".join(coldata))
         # print(js)
         if last_time is not None:
             interval = float(js["seconds"]) - float(last_time)
@@ -110,6 +131,10 @@ def analyze(file):
             max_vel = vel
         last_position = position
         last_time = t
+
+    print()
+    for i, c in enumerate(column):
+        print("{}: min={:2.2f} max={:2.2f}".format(c, col_mins[i], col_maxs[i]))
 
     average_interval = sum(intervals) / len(intervals)
     print(f"average loop: {average_interval}s")
