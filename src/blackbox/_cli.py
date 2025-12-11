@@ -93,7 +93,7 @@ def analyze(file, column):
         positions.append((float(js["position-x"]), float(js["position-y"])))
 #        targets.append((float(js["target-x"]), float(js["target-y"])))
         times.append(float(js["seconds"]))
-        coldata = []
+        coldata = ["{:.3f}".format(float(js["seconds"]))]
         for i, c in enumerate(column):
             v = js.get(c, "<no-data>")
             try:
@@ -102,8 +102,10 @@ def analyze(file, column):
                     col_maxs[i] = x
                 if x < col_mins[i]:
                     col_mins[i] = x
-                v = "{}={:2.2f}".format(c, x)
+                #v = "{}={:2.2f}".format(c, x)
+                v = "{:2.2f}".format(c, x)
             except ValueError:
+                #v = "{}={}".format(c, v)
                 pass
             coldata.append(v)
         print(" ".join(coldata))
