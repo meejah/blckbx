@@ -1,3 +1,4 @@
+import os
 import json
 import time
 
@@ -84,13 +85,13 @@ class Robot:
     @_m.output()
     def _rotate_telemetry(self):
         self.telemetry_file.close()
-        if self.telemetry_file.stat().st_size == 0:
+        if os.stat(self.telemetry_file.name).st_size == 0:
             self.telementry_file.erase()
         self.telemetry_file = None
 
     def _open_telemetry(self):
         if self.telemetry_file is None:
-            fname = "blackbox-{}.js".format("-".join(time.asctime().lower().split()))
+            fname = "blackbox-{}.js".format(time.strftime("%Y-%m-%d-%H%M%S"))
             print(f"  telemetry: {fname}")
             self.telemetry_file = open(fname, "w")
 
@@ -196,6 +197,7 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
                     state = newstate
             except Exception as e:
                 print(f"ERROR: got message: {e}")
+                raise
         proto.on('message', got_message)
 
         await proto.is_open

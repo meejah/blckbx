@@ -33,7 +33,7 @@ def record():
 def fname_to_date(fn):
     m = re.match("^blackbox-(.*)\\.js", str(fn))
     assert m is not None
-    return datetime.strptime(m.group(1), '%a-%b-%d-%H:%M:%S-%Y')
+    return datetime.strptime(m.group(1), "%Y-%m-%d-%H%M%S")
 
 
 def find_newest_data():
