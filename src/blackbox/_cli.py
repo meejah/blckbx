@@ -79,7 +79,7 @@ def analyze(file, column):
     """
     if file is None:
         fname = find_newest_data()
-        print(f"opening: {fname}")
+        ##print(f"opening: {fname}")
         file = open(fname, "r")
     last_time = None
     intervals = []
@@ -92,8 +92,8 @@ def analyze(file, column):
         js = json.loads(line)
         positions.append((float(js["position-x"]), float(js["position-y"])))
 #        targets.append((float(js["target-x"]), float(js["target-y"])))
-        times.append(float(js["seconds"]))
-        coldata = ["{:.3f}".format(float(js["seconds"]))]
+        times.append(float(js["time"]))
+        coldata = ["{:.3f}".format(float(js["time"]))]
         for i, c in enumerate(column):
             v = js.get(c, "<no-data>")
             try:
@@ -111,9 +111,9 @@ def analyze(file, column):
         print(" ".join(coldata))
         # print(js)
         if last_time is not None:
-            interval = float(js["seconds"]) - float(last_time)
+            interval = float(js["time"]) - float(last_time)
             intervals.append(interval)
-        last_time = float(js["seconds"])
+        last_time = float(js["time"])
 
 
     def point_distance(a, b):

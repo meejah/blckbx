@@ -205,7 +205,10 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
         # if we don't periodically send these requests, the WebSocket
         # is disconnected by the on-robot Web server
         def send_update_request():
-            proto.sendMessage(json.dumps({"type": "GET_ROBOT_STATUS"}).encode("utf8"))
+            try:
+                proto.sendMessage(json.dumps({"type": "GET_ROBOT_STATUS"}).encode("utf8"))
+            except Exception as e:
+                print("Can't get status")
             deferLater(reactor, 1, send_update_request)
         send_update_request()
 
