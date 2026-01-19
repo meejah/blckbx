@@ -108,7 +108,7 @@ def analyze(file, column):
                 #v = "{}={}".format(c, v)
                 pass
             coldata.append(v)
-        print(" ".join(coldata))
+        print(" ".join(str(cd) for cd in coldata))
         # print(js)
         if last_time is not None:
             interval = float(js["time"]) - float(last_time)

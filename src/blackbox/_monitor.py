@@ -124,21 +124,42 @@ def _process_robot_message(msg, state, state_machine):
     """
     We got an incoming WebSocket message
     """
-    ty = msg["type"]
-    if ty == 'RECEIVE_OP_MODE_LIST':
+    try:
+        kind = msg["messageID"]
+    except KeyError:
+        return
+
+    if kind == 'opModesList':
         print("Op Modes:")
-        for om in sorted(msg['opModeList']):
+        for om in sorted([data['name'] for data in msg['data']['opModes']]):
             print(f"  {om}")
 
-    elif ty == 'RECEIVE_CONFIG':
-        pass
+    elif kind == 'telemetryPacket':
+        js = {}
+        for line in msg["data"]:
+            k, v = line.split(":", 1)
+            try:
+                v = float(v)
+            except:
+                pass
+            js[k] = v
+        state_machine.got_telemetry(js)
+#        state = evolve(state, telemetry_count=state.telemetry_count + len(msg["telemetry"]))
+#        for d in msg["telemetry"]:
+#            state_machine.got_telemetry(d["data"])
 
-    elif ty == 'RECEIVE_TELEMETRY':
-        state = evolve(state, telemetry_count=state.telemetry_count + len(msg["telemetry"]))
-        for d in msg["telemetry"]:
-            state_machine.got_telemetry(d["data"])
+    elif kind == "activeOpMode":
+        who = msg["data"]["opMode"]["name"]
+        status = msg["data"]["status"]
+        if status == "INIT":
+            state_machine.init(who)
+        elif status == "RUNNING":
+            state_machine.play(who)
+        else:
+            print("STATUS", status, who)
+            state_machine.stop()
 
-    elif ty == 'RECEIVE_ROBOT_STATUS':
+    elif kind == 'RECEIVE_ROBOT_STATUS':
         status = msg["status"]
         st = "unknown"
         if status["activeOpMode"] == "$Stop$Robot$" or status["activeOpModeStatus"] == "STOPPED":
@@ -154,12 +175,12 @@ def _process_robot_message(msg, state, state_machine):
         state = evolve(state, status=st)
 
     else:
-        print(f"Unknown message type: {ty}")
+        print(f"Unknown message: {kind}")
 
     return state
 
 
-async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
+async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8002/"):
     """
     Connect to and monitor an FTC Dashboard instance.
     """
@@ -188,6 +209,27 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
                 print(f"Op Modes: {new.op_modes}")
 
         def got_message(raw_data, is_binary=False):
+            js = json.loads(raw_data)
+
+            def dump_dict(prefix, js):
+                for k in sorted(js.keys()):
+                    v = js[k]
+                    if type(v) == dict:
+                        print(f"{prefix}{k} ->")
+                        dump_dict(prefix + "  ", v)
+                    elif type(v) == list:
+                        print(f"{prefix}{k} -> [")
+                        for x in v:
+                            print(f"{prefix}  {x}")
+                        print(f"{prefix}]")
+                    else:
+                        print(f"{prefix}{k}: {js[k]}")
+
+            print(f"{len(raw_data)} bytes: {js['pluginID']}")
+##            if js['pluginID'] in ["com.bylazar.telemetry", "com.bylazar.opmodecontrol", "core"]:
+            if js['messageID'] in ("telemetryPacket", ):
+                dump_dict("  ", js)
+
             nonlocal state
             try:
                 data = json.loads(raw_data)
@@ -210,7 +252,7 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8000/"):
             except Exception as e:
                 print("Can't get status")
             deferLater(reactor, 1, send_update_request)
-        send_update_request()
+        ##send_update_request()
 
         try:
             await proto.is_closed
