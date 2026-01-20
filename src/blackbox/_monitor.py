@@ -225,10 +225,10 @@ async def _monitor_dashboard(reactor, wsaddr="ws://192.168.43.1:8002/"):
                     else:
                         print(f"{prefix}{k}: {js[k]}")
 
-            print(f"{len(raw_data)} bytes: {js['pluginID']}")
+##            print(f"{len(raw_data)} bytes: {js['pluginID']}")
 ##            if js['pluginID'] in ["com.bylazar.telemetry", "com.bylazar.opmodecontrol", "core"]:
-            if js['messageID'] in ("telemetryPacket", ):
-                dump_dict("  ", js)
+##            if js['messageID'] in ("telemetryPacket", ):
+##                dump_dict("  ", js)
 
             nonlocal state
             try:
