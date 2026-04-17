@@ -90,10 +90,10 @@ def analyze(file, column):
     col_maxs = [0] * len(column)
     for line in file.readlines():
         js = json.loads(line)
-        positions.append((float(js["position-x"]), float(js["position-y"])))
+        positions.append((float(js.get("position-x", 0)), float(js.get("position-y", 0))))
 #        targets.append((float(js["target-x"]), float(js["target-y"])))
-        times.append(float(js["time"]))
-        coldata = ["{:.3f}".format(float(js["time"]))]
+        times.append(float(js.get("time", 0)))
+        coldata = ["{:.3f}".format(float(js.get("time", 0)))]
         for i, c in enumerate(column):
             v = js.get(c, "<no-data>")
             try:
@@ -111,9 +111,9 @@ def analyze(file, column):
         print(" ".join(str(cd) for cd in coldata))
         # print(js)
         if last_time is not None:
-            interval = float(js["time"]) - float(last_time)
+            interval = float(js.get("time", 0.0)) - float(last_time)
             intervals.append(interval)
-        last_time = float(js["time"])
+        last_time = float(js.get("time", 0.0))
 
 
     def point_distance(a, b):
@@ -128,7 +128,10 @@ def analyze(file, column):
     max_vel = 0.0
     vel = 0.0
     for (position, t) in zip(positions[1:], times[1:]):
-        vel = point_distance(last_position, position) / (t - last_time)
+        if (t - last_time == 0.0):
+            vel = 0.0
+        else:
+            vel = point_distance(last_position, position) / (t - last_time)
         if vel > max_vel:
             max_vel = vel
         last_position = position
@@ -138,11 +141,12 @@ def analyze(file, column):
     for i, c in enumerate(column):
         print("{}: min={:2.2f} max={:2.2f}".format(c, col_mins[i], col_maxs[i]))
 
-    average_interval = sum(intervals) / len(intervals)
-    print(f"average loop: {average_interval}s")
-    lps = 1.0 / average_interval
-    print(f"loops per second: {lps}")
-    print(f"max velocity: {vel}m/s")
+    if len(intervals):
+        average_interval = sum(intervals) / len(intervals)
+        print(f"average loop: {average_interval}s")
+        lps = 1.0 / average_interval if average_interval != 0.0 else 0.0
+        print(f"loops per second: {lps}")
+        print(f"max velocity: {vel}m/s")
 
 
 
