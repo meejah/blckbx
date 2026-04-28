@@ -149,6 +149,45 @@ def analyze(file, column):
         print(f"max velocity: {vel}m/s")
 
 
+@blckbx.command()
+@click.argument("file", type=click.File("r"), required=False, default=None)
+def spindex(file):
+    """
+    """
+    if file is None:
+        fname = find_newest_data()
+        ##print(f"opening: {fname}")
+        file = open(fname, "r")
+
+    start = None
+    for line in file.readlines():
+        js = json.loads(line)
+        
+        if start is None:
+            start = float(js.get("time"))
+        end = float(js.get("time"))
+        
+        target = js.get("spindexer-target-angle")
+        actual = js.get("spindexer-current-angle")
+        slot = int(js.get("spindexer-current-slot"))
+        content = js.get("spindexer-slot-{}".format(slot))
+        ticks = js.get("spindexer-ticks")
+        power = js.get("spindexer-power")
+        pin = js.get("spindexer-pin")
+        loops = js.get("loops")
+        mine = ticks / 537.7 * 360.0
+        # mine = ticks / 384.5 * 360.0
+
+        if target % 120 != 0:
+            print("WARNING", target)
+        #print(target, actual, ticks, mine, power)
+        print(loops, target, actual, power, pin, content)
+        if (power > 1.0 or power < -1.0):
+            pass#print("POWER")
+
+    elapsed = end - start
+    print(loops / elapsed)
+
 
 @blckbx.command()
 @click.option(
